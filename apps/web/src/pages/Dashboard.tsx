@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, TrendingDown, TrendingUp, Smile, Target, Sprout, BookOpen, Lightbulb, CheckCircle2, Circle, Minus, Flame } from 'lucide-react'
+import { Clock, TrendingDown, TrendingUp, Smile, Target, Sprout, BookOpen, Lightbulb, CheckCircle2, Circle, Minus, Flame, RefreshCw } from 'lucide-react'
 import { useUsageStore, useJournalStore, useChallengeStore, useGardenStore } from '../stores/useStore'
 import { CHALLENGES } from '../services/challenges'
 import { showToast } from '../components/Toast'
@@ -1031,6 +1031,7 @@ export default function Dashboard() {
             <QuickAction to="/journal" icon={<BookOpen className="w-5 h-5" />} label="감정 기록" />
             <QuickAction to="/challenges" icon={<Target className="w-5 h-5" />} label={`챌린지 (${activeChallenges})`} />
             <QuickAction to="/garden" icon={<Sprout className="w-5 h-5" />} label="나의 정원" />
+            <QuickAction to="/onboarding" icon={<RefreshCw className="w-5 h-5" />} label="DTI 다시하기" />
           </div>
         </div>
 

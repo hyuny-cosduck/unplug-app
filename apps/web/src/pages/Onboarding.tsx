@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Share2, RefreshCw } from 'lucide-react'
 import { useOnboarding, useGardenStore } from '../stores/useStore'
@@ -93,6 +93,124 @@ interface PersonalityType {
   tip: string
   compatibility: string[]
   percentage: number // % of users who are this type
+}
+
+// Cute character SVG components for each type
+const CharacterIllustrations: Record<string, React.ReactNode> = {
+  DOOM: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#8B5CF6" />
+      <circle cx="60" cy="60" r="45" fill="#A78BFA" />
+      {/* Spiral eyes */}
+      <circle cx="45" cy="55" r="12" fill="white" />
+      <circle cx="75" cy="55" r="12" fill="white" />
+      <path d="M42 55 Q45 50 48 55 Q45 60 42 55" stroke="#8B5CF6" strokeWidth="2" fill="none" />
+      <path d="M72 55 Q75 50 78 55 Q75 60 72 55" stroke="#8B5CF6" strokeWidth="2" fill="none" />
+      {/* Dizzy mouth */}
+      <path d="M45 78 Q60 85 75 78" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Phone in hand */}
+      <rect x="85" y="70" width="15" height="25" rx="3" fill="#1F2937" />
+      <rect x="87" y="73" width="11" height="18" rx="1" fill="#60A5FA" />
+    </svg>
+  ),
+  FOMO: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#F59E0B" />
+      <circle cx="60" cy="60" r="45" fill="#FBBF24" />
+      {/* Big worried eyes */}
+      <ellipse cx="42" cy="55" rx="14" ry="16" fill="white" />
+      <ellipse cx="78" cy="55" rx="14" ry="16" fill="white" />
+      <circle cx="42" cy="55" r="8" fill="#1F2937" />
+      <circle cx="78" cy="55" r="8" fill="#1F2937" />
+      <circle cx="44" cy="53" r="3" fill="white" />
+      <circle cx="80" cy="53" r="3" fill="white" />
+      {/* Worried eyebrows */}
+      <path d="M30 42 L52 48" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
+      <path d="M90 42 L68 48" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
+      {/* Nervous smile */}
+      <path d="M45 80 Q60 75 75 80" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Notification bells */}
+      <circle cx="95" cy="25" r="10" fill="#EF4444" />
+      <text x="95" y="29" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">3</text>
+    </svg>
+  ),
+  MOOD: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#EC4899" />
+      <circle cx="60" cy="60" r="45" fill="#F472B6" />
+      {/* Half happy half sad face - theater mask style */}
+      <ellipse cx="42" cy="55" rx="10" ry="12" fill="white" />
+      <ellipse cx="78" cy="55" rx="10" ry="12" fill="white" />
+      <circle cx="42" cy="55" r="5" fill="#1F2937" />
+      <circle cx="78" cy="55" r="5" fill="#1F2937" />
+      {/* One eyebrow up, one down */}
+      <path d="M30 45 Q38 40 50 45" stroke="#9D174D" strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M70 48 Q82 43 90 48" stroke="#9D174D" strokeWidth="3" strokeLinecap="round" fill="none" />
+      {/* Half smile half frown */}
+      <path d="M40 78 Q50 85 60 78" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M60 78 Q70 72 80 78" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Blush */}
+      <circle cx="32" cy="70" r="6" fill="#FDB5C7" opacity="0.6" />
+      <circle cx="88" cy="70" r="6" fill="#FDB5C7" opacity="0.6" />
+    </svg>
+  ),
+  BUSY: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#3B82F6" />
+      <circle cx="60" cy="60" r="45" fill="#60A5FA" />
+      {/* Determined eyes */}
+      <ellipse cx="42" cy="55" rx="10" ry="8" fill="white" />
+      <ellipse cx="78" cy="55" rx="10" ry="8" fill="white" />
+      <circle cx="42" cy="55" r="5" fill="#1F2937" />
+      <circle cx="78" cy="55" r="5" fill="#1F2937" />
+      {/* Focused eyebrows */}
+      <path d="M30 48 L52 50" stroke="#1E40AF" strokeWidth="3" strokeLinecap="round" />
+      <path d="M90 48 L68 50" stroke="#1E40AF" strokeWidth="3" strokeLinecap="round" />
+      {/* Slight smile */}
+      <path d="M48 78 Q60 82 72 78" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Coffee cup */}
+      <rect x="82" y="65" width="18" height="20" rx="2" fill="white" />
+      <ellipse cx="91" cy="65" rx="9" ry="3" fill="#D4A574" />
+      <path d="M100 70 Q108 75 100 80" stroke="white" strokeWidth="3" fill="none" />
+      {/* Lightning bolt */}
+      <path d="M20 25 L30 40 L25 40 L35 55 L22 38 L27 38 Z" fill="#FCD34D" />
+    </svg>
+  ),
+  CHILL: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#10B981" />
+      <circle cx="60" cy="60" r="45" fill="#34D399" />
+      {/* Cool sunglasses */}
+      <rect x="28" y="48" width="28" height="18" rx="4" fill="#1F2937" />
+      <rect x="64" y="48" width="28" height="18" rx="4" fill="#1F2937" />
+      <path d="M56 55 L64 55" stroke="#1F2937" strokeWidth="3" />
+      {/* Chill smile */}
+      <path d="M45 78 Q60 88 75 78" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" />
+      {/* Peace sign hand */}
+      <circle cx="95" cy="85" r="12" fill="#FCD9B6" />
+      <rect x="90" y="65" width="4" height="20" rx="2" fill="#FCD9B6" />
+      <rect x="96" y="68" width="4" height="17" rx="2" fill="#FCD9B6" />
+    </svg>
+  ),
+  ZEN: (
+    <svg viewBox="0 0 120 120" className="w-full h-full">
+      <circle cx="60" cy="60" r="50" fill="#6366F1" />
+      <circle cx="60" cy="60" r="45" fill="#818CF8" />
+      {/* Peaceful closed eyes */}
+      <path d="M32 55 Q42 50 52 55" stroke="#1F2937" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M68 55 Q78 50 88 55" stroke="#1F2937" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Serene smile */}
+      <path d="M45 75 Q60 85 75 75" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Lotus position hint */}
+      <ellipse cx="60" cy="105" rx="25" ry="8" fill="#4F46E5" />
+      {/* Sparkles */}
+      <circle cx="25" cy="30" r="4" fill="#FCD34D" />
+      <circle cx="95" cy="25" r="3" fill="#FCD34D" />
+      <circle cx="100" cy="40" r="2" fill="#FCD34D" />
+      {/* Halo */}
+      <ellipse cx="60" cy="18" rx="20" ry="5" fill="none" stroke="#FCD34D" strokeWidth="2" />
+    </svg>
+  ),
 }
 
 const PERSONALITY_TYPES: Record<string, PersonalityType> = {
@@ -296,16 +414,16 @@ export default function Onboarding() {
         {/* Phase 1: Intro */}
         {phase === 'intro' && (
           <div className="text-center">
-            {/* Animated Icons */}
-            <div className="flex justify-center gap-3 mb-6">
-              {['🌀', '👀', '🎭', '⚡', '😎', '🧘'].map((emoji, i) => (
-                <span
-                  key={emoji}
-                  className="text-3xl animate-bounce"
+            {/* Animated Character Avatars */}
+            <div className="flex justify-center gap-2 mb-6">
+              {['DOOM', 'FOMO', 'MOOD', 'BUSY', 'CHILL', 'ZEN'].map((code, i) => (
+                <div
+                  key={code}
+                  className="w-12 h-12 animate-bounce"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
-                  {emoji}
-                </span>
+                  {CharacterIllustrations[code]}
+                </div>
               ))}
             </div>
 
@@ -419,9 +537,11 @@ export default function Onboarding() {
               ref={resultCardRef}
               className={`bg-gradient-to-br ${result.gradient} rounded-3xl p-6 text-white shadow-xl`}
             >
-              {/* Header */}
+              {/* Header with Character */}
               <div className="text-center mb-6">
-                <div className="text-6xl mb-3">{result.emoji}</div>
+                <div className="w-28 h-28 mx-auto mb-4 drop-shadow-lg">
+                  {CharacterIllustrations[result.code]}
+                </div>
                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur px-3 py-1 rounded-full text-sm font-medium mb-3">
                   <span>DTI</span>
                   <span className="opacity-60">•</span>
@@ -480,16 +600,15 @@ export default function Onboarding() {
               {/* Compatibility */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 mb-2">🤝 Best Detox Partners</h3>
-                <div className="flex gap-2">
-                  {result.compatibility.map((code) => {
-                    const type = PERSONALITY_TYPES[code]
-                    return (
-                      <div key={code} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl">
-                        <span>{type.emoji}</span>
-                        <span className="text-sm font-medium text-gray-700">{code}</span>
+                <div className="flex gap-3">
+                  {result.compatibility.map((code) => (
+                    <div key={code} className="flex flex-col items-center gap-1 bg-gray-50 px-4 py-3 rounded-xl">
+                      <div className="w-12 h-12">
+                        {CharacterIllustrations[code]}
                       </div>
-                    )
-                  })}
+                      <span className="text-xs font-medium text-gray-700">{code}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
