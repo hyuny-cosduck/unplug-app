@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Copy, Check, UserPlus } from 'lucide-react'
+import { Users, Copy, Check, UserPlus, ArrowLeft } from 'lucide-react'
 import { useGroupStore } from '../stores/useStore'
 import { showToast } from '../components/Toast'
 
@@ -50,6 +50,14 @@ export default function GroupCreate() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-50">
       <div className="max-w-md mx-auto px-6 py-12">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/landing')}
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
+        </button>
 
         {/* Header */}
         <div className="text-center mb-8">

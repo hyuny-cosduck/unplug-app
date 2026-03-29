@@ -29,6 +29,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/" element={getDefaultRoute()} />
+        <Route path="/landing" element={<Landing />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* Group-based routes (main flow from report) */}
