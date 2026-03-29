@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Force light mode - override system dark mode preference */
+:root {
+  color-scheme: light only;
+}
+
+html, body {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Override dark mode completely */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light only;
+  }
+
+  html, body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Force light backgrounds for common elements */
+  .bg-gray-800, .dark\:bg-gray-800 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-gray-900, .dark\:bg-gray-900 {
+    background-color: #f9fafb !important;
+  }
+
+  .bg-gray-700, .dark\:bg-gray-700 {
+    background-color: #f3f4f6 !important;
+  }
+
+  .text-white, .dark\:text-white {
+    color: #111827 !important;
+  }
+
+  .text-gray-300, .dark\:text-gray-300,
+  .text-gray-400, .dark\:text-gray-400 {
+    color: #6b7280 !important;
+  }
+
+  .border-gray-700, .dark\:border-gray-700 {
+    border-color: #e5e7eb !important;
+  }
+}
+
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4f46e5;
+  --color-accent: #10b981;
+  --color-accent-light: #34d399;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-garden-green: #22c55e;
+  --color-garden-earth: #92400e;
+  --color-calm: #8b5cf6;
+  --animate-slide-down: slide-down 0.3s ease-out;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

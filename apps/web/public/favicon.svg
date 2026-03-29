@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="24" fill="#6366f1"/>
+
+  <!-- Unplug icon (power plug being pulled out) -->
+  <g transform="translate(12, 10)">
+    <!-- Plug prongs -->
+    <rect x="8" y="0" width="3" height="10" rx="1.5" fill="white"/>
+    <rect x="15" y="0" width="3" height="10" rx="1.5" fill="white"/>
+
+    <!-- Plug body -->
+    <rect x="5" y="8" width="16" height="12" rx="3" fill="white"/>
+
+    <!-- Cord -->
+    <path d="M13 20 L13 28" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Disconnect spark/lines -->
+  <g stroke="white" stroke-width="2" stroke-linecap="round">
+    <line x1="8" y1="18" x2="12" y2="22"/>
+    <line x1="6" y1="24" x2="10" y2="24"/>
+    <line x1="8" y1="30" x2="12" y2="26"/>
+
+    <line x1="40" y1="18" x2="36" y2="22"/>
+    <line x1="42" y1="24" x2="38" y2="24"/>
+    <line x1="40" y1="30" x2="36" y2="26"/>
+  </g>
+</svg>
