@@ -10,7 +10,7 @@ const EMOJIS = ['😀', '😎', '🤓', '🦊', '🐰', '🐻', '🦁', '🐯', 
 
 export default function GroupCreate() {
   const navigate = useNavigate()
-  const { group: localGroup, createGroup: createLocalGroup, addFriend, canStart } = useGroupStore()
+  const { group: localGroup, addFriend } = useGroupStore()
 
   const [group, setGroup] = useState<Group | null>(localGroup)
   const [step, setStep] = useState<'create' | 'invite' | 'waiting'>(group ? 'waiting' : 'create')
@@ -32,8 +32,9 @@ export default function GroupCreate() {
       const result = await groupService.createGroup(groupName.trim(), myName.trim(), myEmoji)
       if (result) {
         setGroup(result.group)
-        // Also update local store for canStart check
-        createLocalGroup(groupName.trim(), myName.trim(), myEmoji)
+        // Store group ID for later retrieval
+        localStorage.setItem('dd-group-id', result.group.id)
+        localStorage.setItem('dd-my-member-id', result.memberId)
         setStep('invite')
         showToast('Group created!')
       } else {
@@ -62,9 +63,7 @@ export default function GroupCreate() {
   }
 
   const handleStart = () => {
-    if (canStart) {
-      navigate('/group')
-    }
+    navigate('/group')
   }
 
   return (
@@ -249,23 +248,17 @@ export default function GroupCreate() {
             </div>
 
             {/* Start Button */}
-            <div className="pt-4">
-              {canStart ? (
-                <button
-                  onClick={handleStart}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Start Challenge
-                </button>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">
-                    Need at least <strong>2 people</strong> to start
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {2 - group.members.length} more needed
-                  </p>
-                </div>
+            <div className="pt-4 space-y-3">
+              <button
+                onClick={handleStart}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+              >
+                Enter Group
+              </button>
+              {group.members.length < 2 && (
+                <p className="text-center text-sm text-gray-400">
+                  Invite friends for challenges! ({group.members.length}/2 minimum)
+                </p>
               )}
             </div>
 

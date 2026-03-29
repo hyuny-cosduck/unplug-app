@@ -29,7 +29,10 @@ export default function GroupJoin() {
       if (groupService.isCloudEnabled) {
         // Use Supabase
         const result = await groupService.joinGroup(code, myName.trim(), myEmoji)
-        if (result.success) {
+        if (result.success && result.group && result.memberId) {
+          // Store group ID for later retrieval
+          localStorage.setItem('dd-group-id', result.group.id)
+          localStorage.setItem('dd-my-member-id', result.memberId)
           showToast('Successfully joined the group!')
           navigate('/group')
         } else {

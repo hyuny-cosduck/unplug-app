@@ -1,22 +1,64 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Clock, Camera, Users, Target } from 'lucide-react'
-import { useGroupStore } from '../stores/useStore'
+import { Trophy, Clock, Camera, Users, Target, Loader2 } from 'lucide-react'
+// import { useGroupStore } from '../stores/useStore'
+import { groupService } from '../services/groupService'
 import { showToast } from '../components/Toast'
+import type { Group } from '../types'
 
 export default function GroupDashboard() {
   const navigate = useNavigate()
-  const {
-    group,
-    myMemberId,
-    logProgress,
-    addFriendProgress,
-    getTodayLeaderboard,
-    getWeeklyStats,
-  } = useGroupStore()
 
+  const [group, setGroup] = useState<Group | null>(null)
+  const [myMemberId, setMyMemberId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [showLogModal, setShowLogModal] = useState(false)
   const [logMinutes, setLogMinutes] = useState(60)
+
+  // Fetch group from Supabase on mount
+  useEffect(() => {
+    const fetchGroup = async () => {
+      const groupId = localStorage.getItem('dd-group-id')
+      const memberId = localStorage.getItem('dd-my-member-id')
+
+      if (!groupId) {
+        setIsLoading(false)
+        return
+      }
+
+      setMyMemberId(memberId)
+
+      try {
+        const fetchedGroup = await groupService.fetchGroup(groupId)
+        if (fetchedGroup) {
+          setGroup(fetchedGroup)
+        }
+      } catch (err) {
+        console.error('Error fetching group:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchGroup()
+
+    // Set up real-time subscription
+    const groupId = localStorage.getItem('dd-group-id')
+    if (groupId && groupService.isCloudEnabled) {
+      const unsubscribe = groupService.subscribe(groupId, (updatedGroup) => {
+        setGroup(updatedGroup)
+      })
+      return unsubscribe
+    }
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!group) {
     return (
@@ -34,25 +76,58 @@ export default function GroupDashboard() {
     )
   }
 
-  const leaderboard = getTodayLeaderboard()
-  const weeklyStats = getWeeklyStats()
+  // Calculate today's leaderboard from progress data
+  const today = new Date().toISOString().split('T')[0]
+  const leaderboard = group.members.map(member => {
+    const todayProgress = group.progress.find(
+      p => p.memberId === member.id && p.date === today
+    )
+    return {
+      member,
+      minutes: todayProgress?.minutes ?? null,
+    }
+  }).sort((a, b) => {
+    if (a.minutes === null) return 1
+    if (b.minutes === null) return -1
+    return a.minutes - b.minutes // Lower is better
+  })
+
+  // Calculate weekly stats
+  const weekAgo = new Date()
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoStr = weekAgo.toISOString().split('T')[0]
+
+  const weeklyStats = group.members.map(member => {
+    const memberProgress = group.progress.filter(
+      p => p.memberId === member.id && p.date >= weekAgoStr
+    )
+    const totalMinutes = memberProgress.reduce((sum, p) => sum + p.minutes, 0)
+    const daysLogged = new Set(memberProgress.map(p => p.date)).size
+    return { member, totalMinutes, daysLogged }
+  }).sort((a, b) => a.totalMinutes - b.totalMinutes)
+
   const myStats = weeklyStats.find(s => s.member.id === myMemberId)
   const myRank = leaderboard.findIndex(l => l.member.id === myMemberId) + 1
 
-  const handleLog = () => {
-    logProgress(logMinutes)
-    setShowLogModal(false)
-    showToast(`Logged ${logMinutes} minutes`)
+  const handleLog = async () => {
+    if (!myMemberId) return
 
-    // Demo: simulate friends logging too
-    group.members.forEach(member => {
-      if (!member.isMe) {
-        const randomMinutes = Math.floor(Math.random() * 180) + 30
-        setTimeout(() => {
-          addFriendProgress(member.id, randomMinutes)
-        }, Math.random() * 2000)
+    setShowLogModal(false)
+    showToast(`Logging ${logMinutes} minutes...`)
+
+    try {
+      const success = await groupService.logProgress(group.id, myMemberId, logMinutes)
+      if (success) {
+        showToast(`Logged ${logMinutes} minutes!`)
+        // Refresh group data
+        const updatedGroup = await groupService.fetchGroup(group.id)
+        if (updatedGroup) setGroup(updatedGroup)
+      } else {
+        showToast('Failed to log progress')
       }
-    })
+    } catch (err) {
+      showToast('Something went wrong')
+    }
   }
 
   return (
