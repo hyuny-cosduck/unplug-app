@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Copy, Check, UserPlus, ArrowLeft } from 'lucide-react'
+import { Users, Copy, Check, UserPlus, ArrowLeft, Cloud, HardDrive } from 'lucide-react'
 import { useGroupStore } from '../stores/useStore'
+import { groupService } from '../services/groupService'
 import { showToast } from '../components/Toast'
+import type { Group } from '../types'
 
 const EMOJIS = ['😀', '😎', '🤓', '🦊', '🐰', '🐻', '🦁', '🐯', '🐸', '🐵']
 
 export default function GroupCreate() {
   const navigate = useNavigate()
-  const { group, createGroup, addFriend, canStart } = useGroupStore()
+  const { group: localGroup, createGroup: createLocalGroup, addFriend, canStart } = useGroupStore()
 
+  const [group, setGroup] = useState<Group | null>(localGroup)
   const [step, setStep] = useState<'create' | 'invite' | 'waiting'>(group ? 'waiting' : 'create')
+  const [isLoading, setIsLoading] = useState(false)
   const [groupName, setGroupName] = useState('')
   const [myName, setMyName] = useState('')
   const [myEmoji, setMyEmoji] = useState('😀')
@@ -20,10 +24,26 @@ export default function GroupCreate() {
   const [friendName, setFriendName] = useState('')
   const [friendEmoji, setFriendEmoji] = useState('🦊')
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!groupName.trim() || !myName.trim()) return
-    createGroup(groupName.trim(), myName.trim(), myEmoji)
-    setStep('invite')
+
+    setIsLoading(true)
+    try {
+      const result = await groupService.createGroup(groupName.trim(), myName.trim(), myEmoji)
+      if (result) {
+        setGroup(result.group)
+        // Also update local store for canStart check
+        createLocalGroup(groupName.trim(), myName.trim(), myEmoji)
+        setStep('invite')
+        showToast('Group created!')
+      } else {
+        showToast('Failed to create group')
+      }
+    } catch (err) {
+      showToast('Something went wrong')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const copyCode = () => {
@@ -129,10 +149,10 @@ export default function GroupCreate() {
 
               <button
                 onClick={handleCreate}
-                disabled={!groupName.trim() || !myName.trim()}
+                disabled={!groupName.trim() || !myName.trim() || isLoading}
                 className="w-full py-3 bg-primary text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed mt-4"
               >
-                Create Group
+                {isLoading ? 'Creating...' : 'Create Group'}
               </button>
 
               <div className="text-center mt-4 pt-4 border-t border-gray-100">
@@ -247,6 +267,31 @@ export default function GroupCreate() {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Connection Status */}
+            <div className={`p-4 rounded-xl border ${
+              groupService.isCloudEnabled
+                ? 'bg-emerald-50 border-emerald-200'
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {groupService.isCloudEnabled ? (
+                  <>
+                    <Cloud className="w-5 h-5 text-emerald-600" />
+                    <p className="text-sm text-emerald-800">
+                      <strong>Cloud Sync:</strong> Friends can join from any device
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <HardDrive className="w-5 h-5 text-amber-600" />
+                    <p className="text-sm text-amber-800">
+                      <strong>Local Mode:</strong> Share this device to test
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
