@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Clock, Camera, Users, Target, Loader2, Upload, X, Sparkles } from 'lucide-react'
+import { Trophy, Clock, Camera, Users, Target, Loader2, Upload, X, Sparkles, Bell } from 'lucide-react'
 // import { useGroupStore } from '../stores/useStore'
-import { groupService } from '../services/groupService'
+import { groupService, type Nudge } from '../services/groupService'
 import { showToast } from '../components/Toast'
 import type { Group } from '../types'
 import Tesseract from 'tesseract.js'
@@ -19,10 +19,12 @@ export default function GroupDashboard() {
   const [isProcessingOCR, setIsProcessingOCR] = useState(false)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [nudges, setNudges] = useState<Nudge[]>([])
+  const [showNudgeModal, setShowNudgeModal] = useState(false)
 
-  // Fetch group from Supabase on mount
+  // Fetch group and nudges from Supabase on mount
   useEffect(() => {
-    const fetchGroup = async () => {
+    const fetchData = async () => {
       const groupId = localStorage.getItem('dd-group-id')
       const memberId = localStorage.getItem('dd-my-member-id')
 
@@ -38,14 +40,23 @@ export default function GroupDashboard() {
         if (fetchedGroup) {
           setGroup(fetchedGroup)
         }
+
+        // Fetch nudges for this member
+        if (memberId) {
+          const fetchedNudges = await groupService.fetchNudges(memberId)
+          if (fetchedNudges.length > 0) {
+            setNudges(fetchedNudges)
+            setShowNudgeModal(true)
+          }
+        }
       } catch (err) {
-        console.error('Error fetching group:', err)
+        console.error('Error fetching data:', err)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchGroup()
+    fetchData()
 
     // Set up real-time subscription
     const groupId = localStorage.getItem('dd-group-id')
@@ -400,7 +411,15 @@ export default function GroupDashboard() {
             {group.members.filter(m => !m.isMe).map(member => (
               <button
                 key={member.id}
-                onClick={() => showToast(`Nudged ${member.name}!`)}
+                onClick={async () => {
+                  if (!myMemberId || !group) return
+                  const success = await groupService.sendNudge(group.id, myMemberId, member.id)
+                  if (success) {
+                    showToast(`Nudged ${member.name}! 👋`)
+                  } else {
+                    showToast('Failed to send nudge')
+                  }
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-white rounded-full text-sm font-medium hover:bg-amber-100 transition-colors"
               >
                 <span>{member.emoji}</span>
@@ -512,6 +531,55 @@ export default function GroupDashboard() {
                 Log Time
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Nudge Notification Modal */}
+      {showNudgeModal && nudges.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Bell className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                You got nudged! 👋
+              </h3>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {nudges.map((nudge) => (
+                <div
+                  key={nudge.id}
+                  className="bg-amber-50 rounded-xl p-4 border border-amber-200"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{nudge.fromMemberEmoji || '👤'}</span>
+                    <span className="font-medium text-gray-900">
+                      {nudge.fromMemberName || 'Someone'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">{nudge.message}</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {new Date(nudge.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={async () => {
+                // Mark nudges as read
+                const nudgeIds = nudges.map(n => n.id)
+                await groupService.markNudgesRead(nudgeIds)
+                setShowNudgeModal(false)
+                setNudges([])
+              }}
+              className="w-full py-3 bg-primary text-white rounded-xl font-medium"
+            >
+              Got it! I'll put my phone down 📱
+            </button>
           </div>
         </div>
       )}

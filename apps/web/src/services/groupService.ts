@@ -404,6 +404,60 @@ export async function sendNudgeSupabase(
   return true
 }
 
+export interface Nudge {
+  id: string
+  fromMemberId: string
+  fromMemberName?: string
+  fromMemberEmoji?: string
+  message: string
+  createdAt: string
+}
+
+export async function fetchNudgesSupabase(
+  memberId: string
+): Promise<Nudge[]> {
+  const supabase = getSupabase()
+
+  const { data: nudges, error } = await supabase
+    .from('nudges')
+    .select('*, from_member:members!from_member_id(name, emoji)')
+    .eq('to_member_id', memberId)
+    .eq('read', false)
+    .order('created_at', { ascending: false })
+
+  if (error || !nudges) {
+    console.error('Error fetching nudges:', error)
+    return []
+  }
+
+  return nudges.map((n: any) => ({
+    id: n.id,
+    fromMemberId: n.from_member_id,
+    fromMemberName: n.from_member?.name,
+    fromMemberEmoji: n.from_member?.emoji,
+    message: n.message,
+    createdAt: n.created_at,
+  }))
+}
+
+export async function markNudgesReadSupabase(
+  nudgeIds: string[]
+): Promise<boolean> {
+  const supabase = getSupabase()
+
+  const { error } = await supabase
+    .from('nudges')
+    .update({ read: true })
+    .in('id', nudgeIds)
+
+  if (error) {
+    console.error('Error marking nudges as read:', error)
+    return false
+  }
+
+  return true
+}
+
 // ============================================
 // REAL-TIME SUBSCRIPTIONS
 // ============================================
@@ -621,5 +675,26 @@ export const groupService = {
       return subscribeToGroup(groupId, onUpdate)
     }
     return () => {} // No-op for localStorage
+  },
+
+  async sendNudge(groupId: string, fromMemberId: string, toMemberId: string, message?: string) {
+    if (isSupabaseConfigured) {
+      return sendNudgeSupabase(groupId, fromMemberId, toMemberId, message)
+    }
+    return false // Not supported in local mode
+  },
+
+  async fetchNudges(memberId: string) {
+    if (isSupabaseConfigured) {
+      return fetchNudgesSupabase(memberId)
+    }
+    return [] // Not supported in local mode
+  },
+
+  async markNudgesRead(nudgeIds: string[]) {
+    if (isSupabaseConfigured) {
+      return markNudgesReadSupabase(nudgeIds)
+    }
+    return false // Not supported in local mode
   },
 }
