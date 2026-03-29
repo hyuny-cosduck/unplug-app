@@ -46,6 +46,7 @@ interface DbMember {
   user_id: string | null
   joined_at: string
   dti_type: string | null
+  username: string | null
 }
 
 interface DbChallenge {
@@ -82,7 +83,8 @@ export async function createGroupSupabase(
   groupName: string,
   myName: string,
   myEmoji: string,
-  dtiType?: string
+  dtiType?: string,
+  username?: string
 ): Promise<{ group: Group; memberId: string } | null> {
   const supabase = getSupabase()
   const code = generateCode()
@@ -109,6 +111,7 @@ export async function createGroupSupabase(
       name: myName,
       emoji: myEmoji,
       dti_type: dtiType,
+      username: username,
     })
     .select()
     .single()
@@ -148,7 +151,8 @@ export async function joinGroupSupabase(
   code: string,
   myName: string,
   myEmoji: string,
-  dtiType?: string
+  dtiType?: string,
+  username?: string
 ): Promise<{ success: boolean; group?: Group; memberId?: string; error?: string }> {
   const supabase = getSupabase()
 
@@ -173,6 +177,7 @@ export async function joinGroupSupabase(
       name: myName,
       emoji: myEmoji,
       dti_type: dtiType,
+      username: username,
     })
     .select()
     .single()
@@ -462,15 +467,50 @@ export function subscribeToGroup(
 }
 
 // ============================================
+// FETCH ALL GROUPS FOR A USERNAME
+// ============================================
+
+export async function fetchGroupsForUsername(username: string): Promise<Group[]> {
+  const supabase = getSupabase()
+
+  // Get all members with this username
+  const { data: members, error: membersError } = await supabase
+    .from('members')
+    .select('*, groups(*)')
+    .eq('username', username)
+
+  if (membersError || !members) {
+    console.error('Error fetching groups for username:', membersError)
+    return []
+  }
+
+  // Extract unique groups
+  const groupMap = new Map<string, Group>()
+
+  for (const member of members) {
+    const dbGroup = (member as any).groups as DbGroup
+    if (!dbGroup || groupMap.has(dbGroup.id)) continue
+
+    // Fetch full group data
+    const fullGroup = await fetchGroupSupabase(dbGroup.id)
+    if (fullGroup) {
+      groupMap.set(dbGroup.id, fullGroup)
+    }
+  }
+
+  return Array.from(groupMap.values())
+}
+
+// ============================================
 // HYBRID SERVICE (Uses Supabase when available, localStorage otherwise)
 // ============================================
 
 export const groupService = {
   isCloudEnabled: isSupabaseConfigured,
 
-  async createGroup(groupName: string, myName: string, myEmoji: string, dtiType?: string) {
+  async createGroup(groupName: string, myName: string, myEmoji: string, dtiType?: string, username?: string) {
     if (isSupabaseConfigured) {
-      return createGroupSupabase(groupName, myName, myEmoji, dtiType)
+      return createGroupSupabase(groupName, myName, myEmoji, dtiType, username)
     }
 
     // Fallback to localStorage
@@ -498,9 +538,9 @@ export const groupService = {
     return { group, memberId }
   },
 
-  async joinGroup(code: string, myName: string, myEmoji: string, dtiType?: string) {
+  async joinGroup(code: string, myName: string, myEmoji: string, dtiType?: string, username?: string) {
     if (isSupabaseConfigured) {
-      return joinGroupSupabase(code, myName, myEmoji, dtiType)
+      return joinGroupSupabase(code, myName, myEmoji, dtiType, username)
     }
 
     // Fallback: check local storage
@@ -534,6 +574,15 @@ export const groupService = {
       return fetchGroupSupabase(groupId)
     }
     return loadLocal<Group | null>(GROUP_STORAGE_KEY, null)
+  },
+
+  async fetchMyGroups(username: string) {
+    if (isSupabaseConfigured) {
+      return fetchGroupsForUsername(username)
+    }
+    // Fallback: return single local group if exists
+    const group = loadLocal<Group | null>(GROUP_STORAGE_KEY, null)
+    return group ? [group] : []
   },
 
   async logProgress(groupId: string, memberId: string, minutes: number, screenshotUrl?: string) {

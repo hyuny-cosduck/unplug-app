@@ -28,7 +28,8 @@ export default function GroupJoin() {
 
       if (groupService.isCloudEnabled) {
         // Use Supabase
-        const result = await groupService.joinGroup(code, myName.trim(), myEmoji)
+        const username = localStorage.getItem('dd-username') || undefined
+        const result = await groupService.joinGroup(code, myName.trim(), myEmoji, undefined, username)
         if (result.success && result.group && result.memberId) {
           // Store group ID for later retrieval
           localStorage.setItem('dd-group-id', result.group.id)
@@ -60,7 +61,7 @@ export default function GroupJoin() {
       <div className="max-w-md mx-auto px-6 py-12">
         {/* Back Button */}
         <button
-          onClick={() => navigate('/group/create')}
+          onClick={() => navigate('/my-groups')}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6"
         >
           <ArrowLeft className="w-5 h-5" />

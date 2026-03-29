@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useOnboarding, useGroupStore } from './stores/useStore'
+import { useOnboarding } from './stores/useStore'
 import BottomNav from './components/BottomNav'
 import { ToastContainer } from './components/Toast'
 import Landing from './pages/Landing'
@@ -9,6 +9,7 @@ import UsageLog from './pages/UsageLog'
 import Journal from './pages/Journal'
 import Challenges from './pages/Challenges'
 import Garden from './pages/Garden'
+import MyGroups from './pages/MyGroups'
 import GroupCreate from './pages/GroupCreate'
 import GroupJoin from './pages/GroupJoin'
 import GroupDashboard from './pages/GroupDashboard'
@@ -16,13 +17,11 @@ import GroupChallenge from './pages/GroupChallenge'
 
 function AppRoutes() {
   const { onboarded } = useOnboarding()
-  const { group, canStart } = useGroupStore()
 
-  // Main flow: Landing -> Onboarding -> GroupCreate -> GroupDashboard
+  // Main flow: Landing -> Onboarding -> MyGroups -> GroupDashboard
   const getDefaultRoute = () => {
     if (!onboarded) return <Landing />
-    if (!group || !canStart) return <Navigate to="/group/create" />
-    return <Navigate to="/group" />
+    return <Navigate to="/my-groups" />
   }
 
   return (
@@ -32,7 +31,8 @@ function AppRoutes() {
         <Route path="/landing" element={<Landing />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
-        {/* Group-based routes (main flow from report) */}
+        {/* Group-based routes (main flow) */}
+        <Route path="/my-groups" element={<MyGroups />} />
         <Route path="/group/create" element={<GroupCreate />} />
         <Route path="/group/join" element={<GroupJoin />} />
         <Route path="/group" element={<GroupDashboard />} />
@@ -45,7 +45,7 @@ function AppRoutes() {
         <Route path="/challenges" element={<Challenges />} />
         <Route path="/garden" element={<Garden />} />
       </Routes>
-      {onboarded && group && canStart && <BottomNav />}
+      {onboarded && <BottomNav />}
     </>
   )
 }
