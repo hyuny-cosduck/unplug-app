@@ -379,7 +379,7 @@ export default function Onboarding() {
   }
 
   const handleShare = async () => {
-    const shareText = `I'm a ${result.name} (${result.code}) on my digital detox journey! 🌱\n\n${result.descriptionKr}\n\nTake the test: unplug-together.vercel.app`
+    const shareText = `My Detox Type: ${result.code}\nI'm a ${result.name} (${result.code}) on my digital detox journey! 🌱\n\n${result.descriptionKr}\n\nTake the test: https://unplug-together.vercel.app`
 
     if (navigator.share) {
       try {
