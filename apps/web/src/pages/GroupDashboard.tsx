@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Clock, Camera, Users, Target, Loader2 } from 'lucide-react'
+import { Trophy, Clock, Camera, Users, Target, Loader2, Upload, X, Sparkles } from 'lucide-react'
 // import { useGroupStore } from '../stores/useStore'
 import { groupService } from '../services/groupService'
 import { showToast } from '../components/Toast'
 import type { Group } from '../types'
+import Tesseract from 'tesseract.js'
 
 export default function GroupDashboard() {
   const navigate = useNavigate()
@@ -14,6 +15,10 @@ export default function GroupDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [showLogModal, setShowLogModal] = useState(false)
   const [logMinutes, setLogMinutes] = useState(60)
+  const [screenshot, setScreenshot] = useState<string | null>(null)
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false)
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch group from Supabase on mount
   useEffect(() => {
@@ -109,10 +114,86 @@ export default function GroupDashboard() {
   const myStats = weeklyStats.find(s => s.member.id === myMemberId)
   const myRank = leaderboard.findIndex(l => l.member.id === myMemberId) + 1
 
+  // Parse screen time from OCR text (handles various formats)
+  const parseScreenTime = (text: string): number | null => {
+    // Common patterns: "2h 30m", "2시간 30분", "150 min", "2:30", etc.
+    const patterns = [
+      /(\d+)\s*h(?:our)?s?\s*(\d+)?\s*m(?:in)?/i,  // 2h 30m, 2 hours 30 min
+      /(\d+)\s*시간\s*(\d+)?\s*분/,                   // 2시간 30분
+      /(\d+):(\d+)/,                                  // 2:30
+      /(\d+)\s*m(?:in)?(?:ute)?s?/i,                 // 150 min, 150 minutes
+      /(\d+)\s*분/,                                   // 150분
+    ]
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match) {
+        if (pattern.source.includes(':') || pattern.source.includes('h') || pattern.source.includes('시간')) {
+          const hours = parseInt(match[1]) || 0
+          const mins = parseInt(match[2]) || 0
+          return hours * 60 + mins
+        } else {
+          return parseInt(match[1])
+        }
+      }
+    }
+    return null
+  }
+
+  // Handle screenshot upload and OCR
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Show preview
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const imageData = event.target?.result as string
+      setScreenshot(imageData)
+      setIsProcessingOCR(true)
+      setOcrConfidence(null)
+
+      try {
+        showToast('Analyzing screenshot...')
+        const result = await Tesseract.recognize(imageData, 'eng+kor', {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              // Progress update
+            }
+          }
+        })
+
+        const extractedTime = parseScreenTime(result.data.text)
+        if (extractedTime !== null && extractedTime >= 0 && extractedTime <= 600) {
+          setLogMinutes(extractedTime)
+          setOcrConfidence(Math.round(result.data.confidence))
+          showToast(`Detected: ${extractedTime} minutes`)
+        } else {
+          showToast('Could not detect time. Please adjust manually.')
+        }
+      } catch (err) {
+        console.error('OCR error:', err)
+        showToast('Failed to analyze screenshot')
+      } finally {
+        setIsProcessingOCR(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const clearScreenshot = () => {
+    setScreenshot(null)
+    setOcrConfidence(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handleLog = async () => {
     if (!myMemberId) return
 
     setShowLogModal(false)
+    clearScreenshot()
     showToast(`Logging ${logMinutes} minutes...`)
 
     try {
@@ -362,15 +443,64 @@ export default function GroupDashboard() {
               <span>5h</span>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-3 mb-4 text-center">
-              <p className="text-xs text-gray-500">
-                Upload a screenshot of your screen time for verification (optional)
-              </p>
+            {/* Screenshot Upload */}
+            <div className="mb-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleScreenshotUpload}
+                className="hidden"
+                id="screenshot-upload"
+              />
+
+              {!screenshot ? (
+                <label
+                  htmlFor="screenshot-upload"
+                  className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Upload className="w-6 h-6 text-gray-400" />
+                  <span className="text-sm text-gray-500">
+                    Upload screenshot for auto-detect
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    (Screen Time / Digital Wellbeing)
+                  </span>
+                </label>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={screenshot}
+                    alt="Screenshot"
+                    className="w-full h-32 object-cover rounded-xl"
+                  />
+                  <button
+                    onClick={clearScreenshot}
+                    className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  {isProcessingOCR && (
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                  {ocrConfidence !== null && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 bg-green-500 text-white text-xs rounded-full">
+                      <Sparkles className="w-3 h-3" />
+                      Auto-detected ({ocrConfidence}% confidence)
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowLogModal(false)}
+                onClick={() => {
+                  setShowLogModal(false)
+                  clearScreenshot()
+                }}
                 className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600"
               >
                 Cancel
