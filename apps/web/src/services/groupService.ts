@@ -721,4 +721,69 @@ export const groupService = {
     }
     return false // Not supported in local mode
   },
+
+  // Save DTI result (even without group membership)
+  async saveDtiResult(dtiType: string, deviceId?: string) {
+    if (!isSupabaseConfigured) return false
+
+    try {
+      const supabase = getSupabase()
+
+      // Use deviceId or generate anonymous one
+      const anonId = deviceId || localStorage.getItem('dd-anon-id') || crypto.randomUUID()
+      localStorage.setItem('dd-anon-id', anonId)
+
+      // Upsert to avoid duplicates per device
+      const { error } = await supabase
+        .from('dti_results')
+        .upsert({
+          device_id: anonId,
+          dti_type: dtiType,
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'device_id',
+        })
+
+      if (error) {
+        console.error('Error saving DTI result:', error)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error('Error saving DTI result:', err)
+      return false
+    }
+  },
+
+  // Get DTI stats (for admin)
+  async getDtiStats() {
+    if (!isSupabaseConfigured) return null
+
+    try {
+      const supabase = getSupabase()
+
+      // Total DTI completions
+      const { count: totalDti } = await supabase
+        .from('dti_results')
+        .select('*', { count: 'exact', head: true })
+
+      // Breakdown by type
+      const { data: breakdown } = await supabase
+        .from('dti_results')
+        .select('dti_type')
+
+      const dtiBreakdown: Record<string, number> = {}
+      breakdown?.forEach((r: { dti_type: string }) => {
+        dtiBreakdown[r.dti_type] = (dtiBreakdown[r.dti_type] || 0) + 1
+      })
+
+      return {
+        totalDti: totalDti || 0,
+        dtiBreakdown,
+      }
+    } catch (err) {
+      console.error('Error getting DTI stats:', err)
+      return null
+    }
+  },
 }

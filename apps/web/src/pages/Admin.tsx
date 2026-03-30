@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Users, UsersRound, Brain, ArrowLeft, Loader2, X } from 'lucide-react'
 import { getSupabase } from '../lib/supabase'
+import { groupService } from '../services/groupService'
 
 const ADMIN_PASSWORD = 'unplug2024'  // Simple password for MVP
 
@@ -62,7 +63,7 @@ export default function Admin() {
     try {
       const supabase = getSupabase()
 
-      // Get total users (members)
+      // Get total users (members in groups)
       const { count: totalUsers } = await supabase
         .from('members')
         .select('*', { count: 'exact', head: true })
@@ -72,27 +73,14 @@ export default function Admin() {
         .from('groups')
         .select('*', { count: 'exact', head: true })
 
-      // Get users with DTI type
-      const { data: dtiData } = await supabase
-        .from('members')
-        .select('dti_type')
-        .not('dti_type', 'is', null)
-
-      const totalWithDti = dtiData?.length || 0
-
-      // Count by DTI type
-      const dtiBreakdown: Record<string, number> = {}
-      dtiData?.forEach((member) => {
-        if (member.dti_type) {
-          dtiBreakdown[member.dti_type] = (dtiBreakdown[member.dti_type] || 0) + 1
-        }
-      })
+      // Get DTI stats from dedicated table (all test takers, not just group members)
+      const dtiStats = await groupService.getDtiStats()
 
       setStats({
         totalUsers: totalUsers || 0,
         totalGroups: totalGroups || 0,
-        totalWithDti,
-        dtiBreakdown,
+        totalWithDti: dtiStats?.totalDti || 0,
+        dtiBreakdown: dtiStats?.dtiBreakdown || {},
       })
     } catch (err) {
       console.error('Error fetching stats:', err)

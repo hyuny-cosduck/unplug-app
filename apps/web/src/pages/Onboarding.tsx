@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Share2, Copy } from 'lucide-react'
 import { useOnboarding, useGardenStore } from '../stores/useStore'
+import { groupService } from '../services/groupService'
 import { showToast } from '../components/Toast'
 
 // ============================================
@@ -371,32 +372,33 @@ export default function Onboarding() {
     }, 300)
   }
 
-  const handleComplete = (destination = '/group/create') => {
+  const handleComplete = async (destination = '/group/create') => {
     completeOnboarding()
     addWaterDrops(5)
+    // Save DTI result for later use (group creation, admin tracking)
+    localStorage.setItem('dd-dti-type', result.code)
+    // Save to database for analytics (even without group membership)
+    await groupService.saveDtiResult(result.code)
     navigate(destination)
   }
 
   const getShareUrl = () => {
-    return `https://unplug-together.vercel.app/result/${result.code}`
+    // Use API route for sharing - has correct OG tags and redirects to the real page
+    return `https://unplug-together.vercel.app/api/og/${result.code.toLowerCase()}`
   }
 
   const handleShare = async () => {
     const shareUrl = getShareUrl()
-    // Include URL in text for better compatibility across apps
-    const shareText = `I'm a ${result.name} (${result.code})! 🌱
+    // Include everything in text - no separate title (causes concat issues on KakaoTalk)
+    const shareText = `My DTI: ${result.code} - ${result.name} 🌱
 
 ${result.descriptionKr}
 
-Find out your type:
-${shareUrl}`
+Take the test: ${shareUrl}`
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `My DTI: ${result.code}`,
-          text: shareText,
-        })
+        await navigator.share({ text: shareText })
       } catch {
         // User cancelled
       }

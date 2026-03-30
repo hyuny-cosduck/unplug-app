@@ -32,7 +32,8 @@ export default function GroupJoin() {
       if (groupService.isCloudEnabled) {
         // Use Supabase
         const username = localStorage.getItem('dd-username') || undefined
-        const result = await groupService.joinGroup(code, myName.trim(), myEmoji, undefined, username)
+        const dtiType = localStorage.getItem('dd-dti-type') || undefined
+        const result = await groupService.joinGroup(code, myName.trim(), myEmoji, dtiType, username)
         if (result.success && result.group && result.memberId) {
           // Store group ID for later retrieval
           localStorage.setItem('dd-group-id', result.group.id)

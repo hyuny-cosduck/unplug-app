@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useOnboarding } from './stores/useStore'
 import { ToastContainer } from './components/Toast'
 import Landing from './pages/Landing'
 import Onboarding from './pages/Onboarding'
@@ -11,12 +10,9 @@ import GroupDashboard from './pages/GroupDashboard'
 import Admin from './pages/Admin'
 
 function AppRoutes() {
-  const { onboarded } = useOnboarding()
-
-  // Main flow: Landing -> Onboarding -> MyGroups -> GroupDashboard
+  // Default to Onboarding for viral sharing
   const getDefaultRoute = () => {
-    if (!onboarded) return <Landing />
-    return <Navigate to="/my-groups" />
+    return <Navigate to="/onboarding" />
   }
 
   return (

@@ -6,9 +6,16 @@
         { "key": "Content-Type", "value": "image/png" },
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
+    },
+    {
+      "source": "/og/(.*).png",
+      "headers": [
+        { "key": "Content-Type", "value": "image/png" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     }
   ],
   "rewrites": [
-    { "source": "/((?!og-image|favicon|icons).*)", "destination": "/" }
+    { "source": "/((?!api|og|og-image|favicon|icons).*)", "destination": "/" }
   ]
 }

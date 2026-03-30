@@ -27,7 +27,8 @@ export default function GroupCreate() {
     setIsLoading(true)
     try {
       const username = localStorage.getItem('dd-username') || undefined
-      const result = await groupService.createGroup(groupName.trim(), myName.trim(), myEmoji, undefined, username)
+      const dtiType = localStorage.getItem('dd-dti-type') || undefined
+      const result = await groupService.createGroup(groupName.trim(), myName.trim(), myEmoji, dtiType, username)
       if (result) {
         setGroup(result.group)
         // Store group ID for later retrieval
