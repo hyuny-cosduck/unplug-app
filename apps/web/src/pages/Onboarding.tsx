@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Share2, RefreshCw } from 'lucide-react'
+import { RefreshCw, Share2, Copy } from 'lucide-react'
 import { useOnboarding, useGardenStore } from '../stores/useStore'
 import { showToast } from '../components/Toast'
 
@@ -354,7 +354,6 @@ export default function Onboarding() {
   const [quizStep, setQuizStep] = useState(0)
   const [answers, setAnswers] = useState<QuizAnswers>({})
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
-  const resultCardRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { completeOnboarding } = useOnboarding()
   const { addWaterDrops } = useGardenStore()
@@ -378,24 +377,39 @@ export default function Onboarding() {
     navigate(destination)
   }
 
+  const getShareUrl = () => {
+    return `https://unplug-together.vercel.app/result/${result.code}`
+  }
+
   const handleShare = async () => {
-    const shareText = `My Detox Type: ${result.code}\nI'm a ${result.name} (${result.code}) on my digital detox journey! 🌱\n\n${result.descriptionKr}\n\nTake the test: https://unplug-together.vercel.app`
+    const shareUrl = getShareUrl()
+    // Include URL in text for better compatibility across apps
+    const shareText = `I'm a ${result.name} (${result.code})! 🌱
+
+${result.descriptionKr}
+
+Find out your type:
+${shareUrl}`
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `My Detox Type: ${result.code}`,
+          title: `My DTI: ${result.code}`,
           text: shareText,
         })
       } catch {
-        // User cancelled or share failed
-        await navigator.clipboard.writeText(shareText)
-        showToast('Copied to clipboard!')
+        // User cancelled
       }
     } else {
       await navigator.clipboard.writeText(shareText)
-      showToast('Copied to clipboard!')
+      showToast('Link copied!')
     }
+  }
+
+  const handleCopyLink = async () => {
+    const shareUrl = getShareUrl()
+    await navigator.clipboard.writeText(shareUrl)
+    showToast('Link copied!')
   }
 
   const handleRetake = () => {
@@ -533,10 +547,7 @@ export default function Onboarding() {
         {phase === 'result' && (
           <div className="space-y-6">
             {/* Result Card */}
-            <div
-              ref={resultCardRef}
-              className={`bg-gradient-to-br ${result.gradient} rounded-3xl p-6 text-white shadow-xl`}
-            >
+            <div className={`bg-gradient-to-br ${result.gradient} rounded-3xl p-6 text-white shadow-xl`}>
               {/* Header with Character */}
               <div className="text-center mb-6">
                 <div className="w-28 h-28 mx-auto mb-4 drop-shadow-lg">
@@ -617,10 +628,16 @@ export default function Onboarding() {
             <div className="flex gap-3">
               <button
                 onClick={handleShare}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-violet-200 transition-all"
               >
                 <Share2 className="w-5 h-5" />
-                Share
+                Share Result
+              </button>
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                <Copy className="w-5 h-5" />
               </button>
               <button
                 onClick={handleRetake}

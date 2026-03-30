@@ -111,7 +111,7 @@ export async function createGroupSupabase(
       name: myName,
       emoji: myEmoji,
       dti_type: dtiType,
-      username: username,
+      username: username?.toLowerCase(),  // Always store lowercase
     })
     .select()
     .single()
@@ -177,7 +177,7 @@ export async function joinGroupSupabase(
       name: myName,
       emoji: myEmoji,
       dti_type: dtiType,
-      username: username,
+      username: username?.toLowerCase(),  // Always store lowercase
     })
     .select()
     .single()
@@ -422,7 +422,7 @@ export async function fetchNudgesSupabase(
     .from('nudges')
     .select('*, from_member:members!from_member_id(name, emoji)')
     .eq('to_member_id', memberId)
-    .eq('read', false)
+    .is('read_at', null)  // Use read_at timestamp instead of read boolean
     .order('created_at', { ascending: false })
 
   if (error || !nudges) {
@@ -447,7 +447,7 @@ export async function markNudgesReadSupabase(
 
   const { error } = await supabase
     .from('nudges')
-    .update({ read: true })
+    .update({ read_at: new Date().toISOString() })  // Use read_at timestamp
     .in('id', nudgeIds)
 
   if (error) {
@@ -524,14 +524,31 @@ export function subscribeToGroup(
 // FETCH ALL GROUPS FOR A USERNAME
 // ============================================
 
+export async function checkUsernameExists(username: string): Promise<boolean> {
+  const supabase = getSupabase()
+
+  const { data, error } = await supabase
+    .from('members')
+    .select('id')
+    .ilike('username', username)
+    .limit(1)
+
+  if (error) {
+    console.error('Error checking username:', error)
+    return false
+  }
+
+  return (data?.length || 0) > 0
+}
+
 export async function fetchGroupsForUsername(username: string): Promise<Group[]> {
   const supabase = getSupabase()
 
-  // Get all members with this username
+  // Get all members with this username (case-insensitive)
   const { data: members, error: membersError } = await supabase
     .from('members')
     .select('*, groups(*)')
-    .eq('username', username)
+    .ilike('username', username)
 
   if (membersError || !members) {
     console.error('Error fetching groups for username:', membersError)
@@ -637,6 +654,13 @@ export const groupService = {
     // Fallback: return single local group if exists
     const group = loadLocal<Group | null>(GROUP_STORAGE_KEY, null)
     return group ? [group] : []
+  },
+
+  async checkUsernameExists(username: string) {
+    if (isSupabaseConfigured) {
+      return checkUsernameExists(username)
+    }
+    return false
   },
 
   async logProgress(groupId: string, memberId: string, minutes: number, screenshotUrl?: string) {

@@ -1,0 +1,43 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Character circles -->
+  <circle cx="200" cy="315" r="80" fill="#A78BFA" opacity="0.3"/>
+  <circle cx="400" cy="315" r="80" fill="#FBBF24" opacity="0.3"/>
+  <circle cx="600" cy="315" r="80" fill="#F472B6" opacity="0.3"/>
+  <circle cx="800" cy="315" r="80" fill="#60A5FA" opacity="0.3"/>
+  <circle cx="1000" cy="315" r="80" fill="#34D399" opacity="0.3"/>
+
+  <!-- Main text -->
+  <text x="600" y="200" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white">
+    What's Your DTI?
+  </text>
+  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="white" opacity="0.9">
+    Digital Detox Type Indicator
+  </text>
+
+  <!-- Type badges -->
+  <text x="200" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="white">DOOM</text>
+  <text x="400" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="white">FOMO</text>
+  <text x="600" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="white">MOOD</text>
+  <text x="800" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="white">BUSY</text>
+  <text x="1000" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="white">CHILL</text>
+
+  <!-- CTA -->
+  <rect x="400" y="480" width="400" height="60" rx="30" fill="white"/>
+  <text x="600" y="520" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="bold" fill="#7C3AED">
+    Take the 1-min Quiz!
+  </text>
+
+  <!-- URL -->
+  <text x="600" y="600" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" fill="white" opacity="0.7">
+    unplug-together.vercel.app
+  </text>
+</svg>

@@ -1,11 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { Users, Clock, Target, User } from 'lucide-react'
+import { Users, Camera, User } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: '/group', icon: Users, label: 'Group' },
-  { to: '/log', icon: Clock, label: 'Log' },
-  { to: '/group/challenge', icon: Target, label: 'Challenge' },
-  { to: '/dashboard', icon: User, label: 'Me' },
+  { to: '/log', icon: Camera, label: 'Log' },
+  { to: '/my-groups', icon: User, label: 'Profile' },
 ]
 
 export default function BottomNav() {
