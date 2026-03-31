@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Share2, Copy } from 'lucide-react'
 import { useOnboarding, useGardenStore } from '../stores/useStore'
@@ -355,9 +355,25 @@ export default function Onboarding() {
   const [quizStep, setQuizStep] = useState(0)
   const [answers, setAnswers] = useState<QuizAnswers>({})
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
+  const [realPercentages, setRealPercentages] = useState<Record<string, number>>({})
   const navigate = useNavigate()
   const { completeOnboarding } = useOnboarding()
   const { addWaterDrops } = useGardenStore()
+
+  // Fetch real DTI stats when showing result
+  useEffect(() => {
+    if (phase === 'result') {
+      groupService.getDtiStats().then((stats) => {
+        if (stats && stats.totalDti > 0) {
+          const percentages: Record<string, number> = {}
+          Object.entries(stats.dtiBreakdown).forEach(([type, count]) => {
+            percentages[type] = Math.round((count / stats.totalDti) * 100)
+          })
+          setRealPercentages(percentages)
+        }
+      })
+    }
+  }, [phase])
 
   const handleAnswer = (questionId: string, value: string) => {
     setSelectedAnswer(value)
@@ -383,8 +399,8 @@ export default function Onboarding() {
   }
 
   const getShareUrl = () => {
-    // Use API route for sharing - has correct OG tags and redirects to the real page
-    return `https://unplug-together.vercel.app/api/og/${result.code.toLowerCase()}`
+    // Use /api/dti/ route for sharing - fresh path to bypass KakaoTalk cache
+    return `https://unplug-together.vercel.app/api/dti/${result.code.toLowerCase()}`
   }
 
   const handleShare = async () => {
@@ -570,10 +586,12 @@ Take the test: ${shareUrl}`
                 <p className="text-sm text-white/70 mt-2">{result.descriptionKr}</p>
               </div>
 
-              {/* Stats */}
+              {/* Stats - use real percentages when available */}
               <div className="flex items-center justify-center gap-2 text-sm">
                 <span className="bg-white/20 px-3 py-1 rounded-full">
-                  {result.percentage}% of users
+                  {realPercentages[result.code] !== undefined
+                    ? `${realPercentages[result.code]}% of users`
+                    : `${result.percentage}% of users`}
                 </span>
               </div>
             </div>

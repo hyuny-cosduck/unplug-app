@@ -203,11 +203,13 @@ export default function GroupDashboard() {
     if (!myMemberId) return
 
     setShowLogModal(false)
+    const screenshotToSave = screenshot // Save before clearing
     clearScreenshot()
     showToast(`Logging ${logMinutes} minutes...`)
 
     try {
-      const success = await groupService.logProgress(group.id, myMemberId, logMinutes)
+      // Pass screenshot URL to save it with the progress entry
+      const success = await groupService.logProgress(group.id, myMemberId, logMinutes, screenshotToSave || undefined)
       if (success) {
         showToast(`Logged ${logMinutes} minutes!`)
         // Refresh group data
@@ -420,7 +422,7 @@ export default function GroupDashboard() {
             <input
               type="range"
               min={0}
-              max={300}
+              max={600}
               step={5}
               value={logMinutes}
               onChange={(e) => setLogMinutes(Number(e.target.value))}
@@ -429,11 +431,11 @@ export default function GroupDashboard() {
 
             <div className="flex justify-between text-xs text-slate-400 mb-6">
               <span>0m</span>
-              <span>1h</span>
               <span>2h</span>
-              <span>3h</span>
               <span>4h</span>
-              <span>5h</span>
+              <span>6h</span>
+              <span>8h</span>
+              <span>10h</span>
             </div>
 
             {/* Screenshot Upload */}

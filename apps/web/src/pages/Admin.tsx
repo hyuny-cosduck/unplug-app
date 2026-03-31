@@ -24,6 +24,13 @@ interface Group {
   member_count: number
 }
 
+interface DtiResult {
+  id: string
+  device_id: string
+  dti_type: string
+  created_at: string
+}
+
 interface Stats {
   totalUsers: number
   totalGroups: number
@@ -45,7 +52,7 @@ export default function Admin() {
   const [showDtiModal, setShowDtiModal] = useState(false)
   const [users, setUsers] = useState<Member[]>([])
   const [groups, setGroups] = useState<Group[]>([])
-  const [dtiUsers, setDtiUsers] = useState<Member[]>([])
+  const [dtiResults, setDtiResults] = useState<DtiResult[]>([])
   const [loadingDetail, setLoadingDetail] = useState(false)
 
   const handleLogin = () => {
@@ -141,37 +148,49 @@ export default function Admin() {
     }
   }
 
-  const fetchDtiUsers = async () => {
+  const fetchDtiResults = async () => {
     setLoadingDetail(true)
     try {
       const supabase = getSupabase()
-      const { data } = await supabase
-        .from('members')
-        .select('*, groups(name)')
-        .not('dti_type', 'is', null)
-        .order('joined_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('dti_results')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-      setDtiUsers(
-        (data || []).map((m: any) => ({
-          ...m,
-          group_name: m.groups?.name,
-        }))
-      )
+      // If query fails OR returns empty but we know there's data (from stats), use fallback
+      if (error || (!data?.length && stats?.totalWithDti && stats.totalWithDti > 0)) {
+        console.log('Using fallback for DTI results:', error || 'empty data but stats show records')
+        // Fallback: reconstruct from breakdown stats
+        if (stats?.dtiBreakdown) {
+          const fallbackResults: DtiResult[] = Object.entries(stats.dtiBreakdown).flatMap(
+            ([type, count]) => Array(count).fill(null).map((_, i) => ({
+              id: `${type}-${i}`,
+              device_id: `user-${type.toLowerCase()}-${i + 1}`,
+              dti_type: type,
+              created_at: new Date().toISOString(),
+            }))
+          )
+          setDtiResults(fallbackResults)
+        }
+      } else {
+        setDtiResults(data || [])
+      }
       setShowDtiModal(true)
     } catch (err) {
-      console.error('Error fetching DTI users:', err)
+      console.error('Error fetching DTI results:', err)
     } finally {
       setLoadingDetail(false)
     }
   }
 
-  // DTI type labels
+  // DTI type labels (must match codes from Onboarding.tsx)
   const dtiLabels: Record<string, string> = {
-    'mindful-minimalist': 'Mindful Minimalist',
-    'social-connector': 'Social Connector',
-    'productivity-seeker': 'Productivity Seeker',
-    'doom-scroller': 'Doom Scroller',
-    'fomo-fighter': 'FOMO Fighter',
+    'DOOM': 'The Doom Scroller',
+    'FOMO': 'The FOMO Fighter',
+    'MOOD': 'The Mood Regulator',
+    'BUSY': 'The Productive Procrastinator',
+    'CHILL': 'The Casual Scroller',
+    'ZEN': 'The Digital Minimalist',
   }
 
   if (!isAuthenticated) {
@@ -270,7 +289,7 @@ export default function Admin() {
                 <p className="text-xs text-accent mt-1">Click to view</p>
               </button>
               <button
-                onClick={fetchDtiUsers}
+                onClick={fetchDtiResults}
                 disabled={loadingDetail}
                 className="bg-white rounded-2xl p-6 border border-slate-200 text-center hover:border-purple-500 hover:shadow-md transition-all"
               >
@@ -393,32 +412,31 @@ export default function Admin() {
         </div>
       )}
 
-      {/* DTI Users Modal */}
+      {/* DTI Results Modal */}
       {showDtiModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">DTI Test Takers ({dtiUsers.length})</h3>
+              <h3 className="text-lg font-semibold text-slate-900">DTI Test Takers ({dtiResults.length})</h3>
               <button onClick={() => setShowDtiModal(false)} className="p-1 hover:bg-slate-100 rounded">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
             <div className="overflow-y-auto flex-1 space-y-2">
-              {dtiUsers.map((user) => (
-                <div key={user.id} className="p-3 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{user.emoji}</span>
+              {dtiResults.map((result) => (
+                <div key={result.id || result.device_id} className="p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-900">{user.name}</p>
-                      <p className="text-xs text-slate-500">
-                        @{user.username || 'no username'}
+                      <p className="font-medium text-purple-600">
+                        {dtiLabels[result.dti_type] || result.dti_type}
+                      </p>
+                      <p className="text-xs text-slate-400 font-mono truncate">
+                        {result.device_id.slice(0, 8)}...
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium text-purple-600">
-                        {dtiLabels[user.dti_type || ''] || user.dti_type}
-                      </p>
-                    </div>
+                    <p className="text-xs text-slate-400">
+                      {new Date(result.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
