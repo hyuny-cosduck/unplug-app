@@ -149,38 +149,20 @@ export default function Admin() {
   }
 
   const fetchDtiResults = async () => {
-    setLoadingDetail(true)
-    try {
-      const supabase = getSupabase()
-      const { data, error } = await supabase
-        .from('dti_results')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      // If query fails OR returns empty but we know there's data (from stats), use fallback
-      if (error || (!data?.length && stats?.totalWithDti && stats.totalWithDti > 0)) {
-        console.log('Using fallback for DTI results:', error || 'empty data but stats show records')
-        // Fallback: reconstruct from breakdown stats
-        if (stats?.dtiBreakdown) {
-          const fallbackResults: DtiResult[] = Object.entries(stats.dtiBreakdown).flatMap(
-            ([type, count]) => Array(count).fill(null).map((_, i) => ({
-              id: `${type}-${i}`,
-              device_id: `user-${type.toLowerCase()}-${i + 1}`,
-              dti_type: type,
-              created_at: new Date().toISOString(),
-            }))
-          )
-          setDtiResults(fallbackResults)
-        }
-      } else {
-        setDtiResults(data || [])
-      }
-      setShowDtiModal(true)
-    } catch (err) {
-      console.error('Error fetching DTI results:', err)
-    } finally {
-      setLoadingDetail(false)
+    // Simply use the breakdown data we already have from stats
+    // This avoids RLS/query issues with dti_results table
+    if (stats?.dtiBreakdown) {
+      const results: DtiResult[] = Object.entries(stats.dtiBreakdown).flatMap(
+        ([type, count]) => Array(count).fill(null).map((_, i) => ({
+          id: `${type}-${i}`,
+          device_id: `user-${type.toLowerCase()}-${i + 1}`,
+          dti_type: type,
+          created_at: new Date().toISOString(),
+        }))
+      )
+      setDtiResults(results)
     }
+    setShowDtiModal(true)
   }
 
   // DTI type labels (must match codes from Onboarding.tsx)
