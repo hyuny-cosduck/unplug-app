@@ -149,20 +149,17 @@ export default function Admin() {
   }
 
   const fetchDtiResults = async () => {
-    // Simply use the breakdown data we already have from stats
-    // This avoids RLS/query issues with dti_results table
-    if (stats?.dtiBreakdown) {
-      const results: DtiResult[] = Object.entries(stats.dtiBreakdown).flatMap(
-        ([type, count]) => Array(count).fill(null).map((_, i) => ({
-          id: `${type}-${i}`,
-          device_id: `user-${type.toLowerCase()}-${i + 1}`,
-          dti_type: type,
-          created_at: new Date().toISOString(),
-        }))
-      )
+    setLoadingDetail(true)
+    try {
+      const results = await groupService.getDtiResults()
       setDtiResults(results)
+      setShowDtiModal(true)
+    } catch (err) {
+      console.error('Error fetching DTI results:', err)
+      setShowDtiModal(true)
+    } finally {
+      setLoadingDetail(false)
     }
-    setShowDtiModal(true)
   }
 
   // DTI type labels (must match codes from Onboarding.tsx)

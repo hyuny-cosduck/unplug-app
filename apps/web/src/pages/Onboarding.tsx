@@ -667,13 +667,27 @@ Take the test: ${shareUrl}`
               </button>
             </div>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons with Motivation */}
             <div className="space-y-3 pt-2">
+              {/* Compatibility-based motivation message */}
+              <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 text-center border border-violet-100">
+                <p className="text-sm text-violet-700">
+                  <span className="font-semibold">{result.code}</span> types are <span className="font-semibold">2x more successful</span> when detoxing with{' '}
+                  {result.compatibility.map((c, i) => (
+                    <span key={c}>
+                      <span className="font-semibold">{c}</span>
+                      {i < result.compatibility.length - 1 ? (i === result.compatibility.length - 2 ? ' or ' : ', ') : ''}
+                    </span>
+                  ))}
+                  {' '}friends!
+                </p>
+              </div>
+
               <button
                 onClick={() => handleComplete('/group/create')}
-                className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-2xl font-bold shadow-lg"
+                className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-2xl font-bold shadow-lg shadow-violet-200 hover:shadow-xl transition-all"
               >
-                Create a Detox Group
+                Start a Detox Group with Friends
               </button>
               <button
                 onClick={() => handleComplete('/group/join')}

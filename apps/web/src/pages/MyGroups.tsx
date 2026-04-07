@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Plus, UserPlus, Loader2, LogOut, Sparkles } from 'lucide-react'
+import { Users, Plus, UserPlus, Loader2, LogOut, Sparkles, Target } from 'lucide-react'
 import { groupService } from '../services/groupService'
 import type { Group } from '../types'
 
@@ -223,37 +223,79 @@ export default function MyGroups() {
             </div>
           ) : (
             <div className="space-y-3">
-              {groups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => handleSelectGroup(group)}
-                  className="w-full bg-white rounded-2xl p-4 border border-slate-200 hover:border-primary/50 transition-colors text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{group.name}</h3>
-                      <p className="text-sm text-slate-500">
-                        {group.members.length} members
-                      </p>
+              {groups.map((group) => {
+                // Calculate challenge status
+                const challenge = group.currentChallenge
+                let daysLeft = 0
+                let isActive = false
+                if (challenge) {
+                  const end = new Date(challenge.endDate)
+                  const now = new Date()
+                  daysLeft = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+                  isActive = now >= new Date(challenge.startDate) && now <= end
+                }
+
+                // Find my rank for today
+                const today = new Date().toISOString().split('T')[0]
+                const myMember = group.members.find(m => m.isMe)
+                const todayProgress = group.progress
+                  .filter(p => p.date === today)
+                  .sort((a, b) => a.minutes - b.minutes)
+                const myTodayRank = myMember
+                  ? todayProgress.findIndex(p => p.memberId === myMember.id) + 1
+                  : 0
+
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => handleSelectGroup(group)}
+                    className="w-full bg-white rounded-2xl p-4 border border-slate-200 hover:border-primary/50 transition-colors text-left"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">{group.name}</h3>
+                        <p className="text-sm text-slate-500">
+                          {group.members.length} members
+                        </p>
+                      </div>
+                      <div className="flex -space-x-2">
+                        {group.members.slice(0, 4).map((member) => (
+                          <div
+                            key={member.id}
+                            className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-sm"
+                          >
+                            {member.emoji}
+                          </div>
+                        ))}
+                        {group.members.length > 4 && (
+                          <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs text-slate-600">
+                            +{group.members.length - 4}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex -space-x-2">
-                      {group.members.slice(0, 4).map((member) => (
-                        <div
-                          key={member.id}
-                          className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-sm"
-                        >
-                          {member.emoji}
-                        </div>
-                      ))}
-                      {group.members.length > 4 && (
-                        <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs text-slate-600">
-                          +{group.members.length - 4}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
+
+                    {/* Status badges - only show if there's actionable info */}
+                    {(challenge && isActive) || myTodayRank > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {challenge && isActive && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
+                            <Target className="w-3 h-3" />
+                            {daysLeft}d left
+                          </span>
+                        )}
+                        {myTodayRank > 0 && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            myTodayRank === 1 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            #{myTodayRank} today
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
+                  </button>
+                )
+              })}
             </div>
           )}
 

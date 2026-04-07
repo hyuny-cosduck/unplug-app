@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Clock, Camera, Users, Loader2, Upload, X, Sparkles, Bell, ArrowLeft } from 'lucide-react'
+import { Trophy, Clock, Camera, Users, Loader2, Upload, X, Sparkles, Bell, ArrowLeft, Target, Calendar, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { groupService, type Nudge } from '../services/groupService'
 import { showToast } from '../components/Toast'
 import type { Group } from '../types'
@@ -107,18 +107,41 @@ export default function GroupDashboard() {
     return a.minutes - b.minutes // Lower is better
   })
 
-  // Calculate weekly stats
+  // Calculate weekly stats with trend comparison
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
   const weekAgoStr = weekAgo.toISOString().split('T')[0]
 
+  const twoWeeksAgo = new Date()
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+  const twoWeeksAgoStr = twoWeeksAgo.toISOString().split('T')[0]
+
   const weeklyStats = group.members.map(member => {
-    const memberProgress = group.progress.filter(
+    // This week
+    const thisWeekProgress = group.progress.filter(
       p => p.memberId === member.id && p.date >= weekAgoStr
     )
-    const totalMinutes = memberProgress.reduce((sum, p) => sum + p.minutes, 0)
-    const daysLogged = new Set(memberProgress.map(p => p.date)).size
-    return { member, totalMinutes, daysLogged }
+    const totalMinutes = thisWeekProgress.reduce((sum, p) => sum + p.minutes, 0)
+    const daysLogged = new Set(thisWeekProgress.map(p => p.date)).size
+
+    // Last week (for trend calculation)
+    const lastWeekProgress = group.progress.filter(
+      p => p.memberId === member.id && p.date >= twoWeeksAgoStr && p.date < weekAgoStr
+    )
+    const lastWeekMinutes = lastWeekProgress.reduce((sum, p) => sum + p.minutes, 0)
+
+    // Calculate trend (positive = increased usage = bad, negative = decreased = good)
+    let trend: 'up' | 'down' | 'same' | null = null
+    let trendPercent = 0
+    if (lastWeekMinutes > 0) {
+      const diff = totalMinutes - lastWeekMinutes
+      trendPercent = Math.round((diff / lastWeekMinutes) * 100)
+      if (trendPercent > 5) trend = 'up'
+      else if (trendPercent < -5) trend = 'down'
+      else trend = 'same'
+    }
+
+    return { member, totalMinutes, daysLogged, trend, trendPercent, lastWeekMinutes }
   }).sort((a, b) => a.totalMinutes - b.totalMinutes)
 
   const myStats = weeklyStats.find(s => s.member.id === myMemberId)
@@ -246,6 +269,57 @@ export default function GroupDashboard() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-6 space-y-4">
+        {/* Active Challenge Progress */}
+        {group.currentChallenge && (() => {
+          const start = new Date(group.currentChallenge.startDate)
+          const end = new Date(group.currentChallenge.endDate)
+          const now = new Date()
+          const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+          const elapsedDays = Math.max(0, Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+          const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+          const progress = Math.min(100, Math.round((elapsedDays / totalDays) * 100))
+          const isActive = now >= start && now <= end
+
+          return (
+            <div className="bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl p-5 text-white">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5" />
+                  <span className="font-semibold">{group.currentChallenge.title}</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  isActive ? 'bg-white/20' : 'bg-amber-400 text-amber-900'
+                }`}>
+                  {isActive ? `${daysRemaining}d left` : 'Ended'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <div className="flex justify-between text-sm text-white/80 mb-1">
+                  <span>Progress</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-white/80">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>Day {Math.min(elapsedDays, totalDays)} of {totalDays}</span>
+                </div>
+                {group.currentChallenge.penalty && (
+                  <span className="text-white/60">Penalty: {group.currentChallenge.penalty}</span>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Log Button - Primary Action */}
         <button
           onClick={() => setShowLogModal(true)}
@@ -294,45 +368,69 @@ export default function GroupDashboard() {
           </h2>
 
           <div className="space-y-2">
-            {leaderboard.map((entry, index) => (
-              <div
-                key={entry.member.id}
-                className={`flex items-center gap-3 p-3 rounded-xl ${
-                  entry.member.id === myMemberId
-                    ? 'bg-primary/5 border border-primary/20'
-                    : 'bg-slate-50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  index === 0 ? 'bg-amber-100 text-amber-700' :
-                  index === 1 ? 'bg-slate-200 text-slate-600' :
-                  index === 2 ? 'bg-orange-100 text-orange-700' :
-                  'bg-slate-100 text-slate-500'
-                }`}>
-                  {index + 1}
-                </div>
-                <span className="text-2xl">{entry.member.emoji}</span>
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900">
-                    {entry.member.name}
-                    {entry.member.id === myMemberId && ' (You)'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {entry.minutes !== null ? (
-                    <p className={`font-bold ${
-                      entry.minutes <= 60 ? 'text-accent' :
-                      entry.minutes <= 120 ? 'text-warning' :
-                      'text-danger'
-                    }`}>
-                      {entry.minutes}m
+            {leaderboard.map((entry, index) => {
+              const isNotLogged = entry.minutes === null
+              const isOtherMember = entry.member.id !== myMemberId
+
+              return (
+                <div
+                  key={entry.member.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                    entry.member.id === myMemberId
+                      ? 'bg-primary/5 border border-primary/20'
+                      : isNotLogged
+                        ? 'bg-amber-50 border border-amber-200'
+                        : 'bg-slate-50'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    isNotLogged ? 'bg-amber-100 text-amber-600' :
+                    index === 0 ? 'bg-amber-100 text-amber-700' :
+                    index === 1 ? 'bg-slate-200 text-slate-600' :
+                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                    'bg-slate-100 text-slate-500'
+                  }`}>
+                    {isNotLogged ? '?' : index + 1}
+                  </div>
+                  <span className="text-2xl">{entry.member.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900 truncate">
+                      {entry.member.name}
+                      {entry.member.id === myMemberId && ' (You)'}
                     </p>
-                  ) : (
-                    <p className="text-slate-400 text-sm">Not logged</p>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {entry.minutes !== null ? (
+                      <p className={`font-bold ${
+                        entry.minutes <= 60 ? 'text-accent' :
+                        entry.minutes <= 120 ? 'text-warning' :
+                        'text-danger'
+                      }`}>
+                        {entry.minutes}m
+                      </p>
+                    ) : isOtherMember ? (
+                      <button
+                        onClick={async () => {
+                          if (!myMemberId || !group) return
+                          const success = await groupService.sendNudge(group.id, myMemberId, entry.member.id)
+                          if (success) {
+                            showToast(`Nudged ${entry.member.name}!`)
+                          } else {
+                            showToast('Failed to send nudge')
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-full hover:bg-amber-600 transition-colors flex items-center gap-1"
+                      >
+                        <Bell className="w-3 h-3" />
+                        Nudge
+                      </button>
+                    ) : (
+                      <span className="text-amber-600 text-sm font-medium">Log now</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -355,9 +453,24 @@ export default function GroupDashboard() {
                     <span className="text-sm font-medium text-slate-700">
                       {stat.member.name}
                     </span>
-                    <span className="text-sm text-slate-500">
-                      {stat.totalMinutes}m total
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Trend indicator */}
+                      {stat.trend && (
+                        <span className={`flex items-center gap-0.5 text-xs font-medium ${
+                          stat.trend === 'down' ? 'text-emerald-600' :
+                          stat.trend === 'up' ? 'text-red-500' :
+                          'text-slate-400'
+                        }`}>
+                          {stat.trend === 'down' && <TrendingDown className="w-3 h-3" />}
+                          {stat.trend === 'up' && <TrendingUp className="w-3 h-3" />}
+                          {stat.trend === 'same' && <Minus className="w-3 h-3" />}
+                          {stat.trend !== 'same' && `${Math.abs(stat.trendPercent)}%`}
+                        </span>
+                      )}
+                      <span className="text-sm text-slate-500">
+                        {stat.totalMinutes}m
+                      </span>
+                    </div>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -414,9 +527,32 @@ export default function GroupDashboard() {
               Log Today's SNS Time
             </h3>
 
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <p className="text-5xl font-bold text-primary mb-2">{logMinutes}</p>
               <p className="text-slate-500">minutes</p>
+            </div>
+
+            {/* Quick Select Buttons */}
+            <div className="flex gap-2 justify-center mb-4">
+              {[
+                { label: '30m', value: 30 },
+                { label: '1h', value: 60 },
+                { label: '1.5h', value: 90 },
+                { label: '2h', value: 120 },
+                { label: '3h+', value: 180 },
+              ].map(({ label, value }) => (
+                <button
+                  key={value}
+                  onClick={() => setLogMinutes(value)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    logMinutes === value
+                      ? 'bg-primary text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <input
@@ -429,7 +565,7 @@ export default function GroupDashboard() {
               className="w-full mb-4 accent-primary"
             />
 
-            <div className="flex justify-between text-xs text-slate-400 mb-6">
+            <div className="flex justify-between text-xs text-slate-400 mb-4">
               <span>0m</span>
               <span>2h</span>
               <span>4h</span>

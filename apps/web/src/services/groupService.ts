@@ -786,4 +786,29 @@ export const groupService = {
       return null
     }
   },
+
+  // Get all DTI results (for admin detail view)
+  async getDtiResults() {
+    if (!isSupabaseConfigured) return []
+
+    try {
+      const supabase = getSupabase()
+
+      const { data, error } = await supabase
+        .from('dti_results')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (error) {
+        console.error('Error fetching DTI results:', error)
+        return []
+      }
+
+      return data || []
+    } catch (err) {
+      console.error('Error fetching DTI results:', err)
+      return []
+    }
+  },
 }

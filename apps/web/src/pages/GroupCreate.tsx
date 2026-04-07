@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Copy, Check, ArrowLeft } from 'lucide-react'
+import { Users, Copy, Check, ArrowLeft, Share2 } from 'lucide-react'
 import { groupService } from '../services/groupService'
 import { showToast } from '../components/Toast'
 import type { Group } from '../types'
@@ -52,6 +52,28 @@ export default function GroupCreate() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
     showToast('Copied!')
+  }
+
+  const shareInvite = async () => {
+    if (!group) return
+    const shareText = `Join my Unplug group "${group.name}"!
+
+Code: ${group.code}
+
+Take the DTI quiz and start your digital detox together:
+https://unplug-together.vercel.app/onboarding`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText })
+      } catch {
+        // User cancelled or error
+        copyCode()
+      }
+    } else {
+      navigator.clipboard.writeText(shareText)
+      showToast('Invite message copied!')
+    }
   }
 
   const handleStart = () => {
@@ -173,25 +195,32 @@ export default function GroupCreate() {
         {/* Step 2: Invite Friends */}
         {(step === 'invite' || step === 'waiting') && group && (
           <div className="space-y-4">
-            {/* Invite Code */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200">
-              <h3 className="text-sm font-medium text-slate-500 mb-2">
-                Invite Code
+            {/* Invite Code - Enhanced */}
+            <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white">
+              <h3 className="text-sm font-medium text-white/80 mb-3 text-center">
+                Share this code with friends
               </h3>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 bg-slate-100 rounded-xl px-4 py-3 font-mono text-xl text-center tracking-wider text-slate-900">
+              <div className="bg-white/20 backdrop-blur rounded-xl px-6 py-4 mb-4">
+                <p className="font-mono text-3xl text-center tracking-[0.3em] font-bold">
                   {group.code}
-                </div>
+                </p>
+              </div>
+              <div className="flex gap-2">
                 <button
                   onClick={copyCode}
-                  className="p-3 bg-primary text-white rounded-xl"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition-colors"
                 >
                   {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  {copied ? 'Copied!' : 'Copy Code'}
+                </button>
+                <button
+                  onClick={shareInvite}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-violet-600 rounded-xl font-semibold hover:bg-white/90 transition-colors"
+                >
+                  <Share2 className="w-5 h-5" />
+                  Share Invite
                 </button>
               </div>
-              <p className="text-xs text-slate-400 mt-2 text-center">
-                Share this code with friends to join
-              </p>
             </div>
 
             {/* Members List */}
