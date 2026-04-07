@@ -226,13 +226,13 @@ export default function GroupDashboard() {
     if (!myMemberId) return
 
     setShowLogModal(false)
-    const screenshotToSave = screenshot // Save before clearing
+    const hadScreenshot = !!screenshot // Just track if screenshot was provided
     clearScreenshot()
     showToast(`Logging ${logMinutes} minutes...`)
 
     try {
-      // Pass screenshot URL to save it with the progress entry
-      const success = await groupService.logProgress(group.id, myMemberId, logMinutes, screenshotToSave || undefined)
+      // Pass boolean for verified status (don't save large base64 to DB)
+      const success = await groupService.logProgress(group.id, myMemberId, logMinutes, hadScreenshot)
       if (success) {
         showToast(`Logged ${logMinutes} minutes!`)
         // Refresh group data

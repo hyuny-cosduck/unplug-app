@@ -301,12 +301,14 @@ export async function logProgressSupabase(
   groupId: string,
   memberId: string,
   minutes: number,
-  screenshotUrl?: string
+  hasScreenshot?: boolean
 ): Promise<boolean> {
   const supabase = getSupabase()
   const today = new Date().toISOString().split('T')[0]
 
   // Upsert progress (insert or update if exists)
+  // Note: We don't save the actual screenshot (too large for DB)
+  // Just mark as verified if screenshot was provided
   const { error } = await supabase
     .from('progress')
     .upsert({
@@ -314,8 +316,7 @@ export async function logProgressSupabase(
       group_id: groupId,
       date: today,
       minutes,
-      screenshot_url: screenshotUrl,
-      verified: !!screenshotUrl,
+      verified: !!hasScreenshot,
     }, {
       onConflict: 'member_id,date',
     })
@@ -663,9 +664,9 @@ export const groupService = {
     return false
   },
 
-  async logProgress(groupId: string, memberId: string, minutes: number, screenshotUrl?: string) {
+  async logProgress(groupId: string, memberId: string, minutes: number, hasScreenshot?: boolean) {
     if (isSupabaseConfigured) {
-      return logProgressSupabase(groupId, memberId, minutes, screenshotUrl)
+      return logProgressSupabase(groupId, memberId, minutes, hasScreenshot)
     }
 
     // Fallback to localStorage
@@ -677,8 +678,7 @@ export const groupService = {
       memberId,
       date: today,
       minutes,
-      screenshotUrl,
-      verified: !!screenshotUrl,
+      verified: !!hasScreenshot,
     }
 
     const filteredProgress = group.progress.filter(
